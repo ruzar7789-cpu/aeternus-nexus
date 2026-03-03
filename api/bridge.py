@@ -30,4 +30,3 @@ class handler(BaseHTTPRequestHandler):
             "action": "READY_FOR_COMMAND"
         }
         self.wfile.write(json.dumps(response).encode())
-        
