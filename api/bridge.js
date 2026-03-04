@@ -1,24 +1,22 @@
-// OMNI-KEY CLOUD BRIDGE - VERZE 2.0 (OPRAVA AUTORIZACE)
+// API Bridge na Vercelu
+let lockStatus = "locked"; 
+
 export default function handler(req, res) {
-  // Získání parametrů z požadavku Termuxu
-  const { deviceId, action } = req.query;
+    const { action, deviceId } = req.body || req.query;
 
-  // TVÉ UNIKÁTNÍ ID Z VIDEA
-  const MASTER_ID = "3c400ea8e35724d5";
+    // 1. Termux pošle příkaz k otevření
+    if (action === "trigger_ble_unlock") {
+        lockStatus = "unlock_now";
+        console.log(`[!] Remote trigger received for ${deviceId}`);
+        return res.status(200).json({ status: "signal_sent_to_browser" });
+    }
 
-  // LOGIKA OVĚŘENÍ - OPRAVA STAVU UNAUTHORIZED
-  if (deviceId === MASTER_ID) {
-    return res.status(200).json({
-      status: "AUTHORIZED", 
-      target: "CZ-1MV",
-      command: "READY_FOR_COMMAND",
-      timestamp: new Date().toISOString()
-    });
-  } else {
-    // Pokud ID nesouhlasí, přístup je zamítnut
-    return res.status(403).json({
-      status: "DENIED",
-      message: "Unknown Device ID"
-    });
-  }
+    // 2. Prohlížeč se neustále ptá: "Mám už otevřít?"
+    if (action === "check_status") {
+        const current = lockStatus;
+        if (lockStatus === "unlock_now") lockStatus = "locked"; // Reset po přečtení
+        return res.status(200).json({ command: current });
+    }
+
+    res.status(200).json({ status: "AUTHORIZED", deviceId });
 }
