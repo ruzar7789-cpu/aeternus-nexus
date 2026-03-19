@@ -2,145 +2,71 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AUTONOMNÍ KLÍČ v4.1</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GENESIS_CORE</title>
     <style>
-        /* FIX PRO MOBILNÍ PROHLÍŽEČE */
-        :root {
-            --vh: 1vh;
-        }
-
-        body { 
-            background: #000; 
-            color: #0dff00; 
-            font-family: 'Courier New', monospace; 
-            margin: 0; 
-            padding: 10px; 
-            display: flex; 
-            flex-direction: column; 
-            /* Dynamická výška pro Chrome/Safari lišty */
-            height: 100vh;
-            height: calc(var(--vh, 1vh) * 100);
-            box-sizing: border-box;
-            overflow: hidden; 
-        }
-
-        #console { 
-            flex-grow: 1; 
-            border: 2px solid #0dff00; 
-            padding: 12px; 
-            overflow-y: auto; 
-            background: rgba(0, 15, 0, 0.95); 
-            box-shadow: inset 0 0 15px rgba(13, 255, 0, 0.3); 
-            font-size: 0.8em; 
-            margin-bottom: 12px;
-            word-wrap: break-word;
-            border-radius: 4px;
-        }
-
-        .btn-core { 
-            width: 100%; 
-            min-height: 80px; /* Masivní tlačítko pro palec */
-            background: #0dff00; 
-            color: #000; 
-            border: none; 
-            font-weight: 900; 
-            font-size: 1.2em;
-            cursor: pointer; 
-            text-transform: uppercase; 
-            letter-spacing: 2px;
-            flex-shrink: 0; 
-            border-radius: 8px;
-            box-shadow: 0 4px 0 #068000;
-            margin-bottom: env(safe-area-inset-bottom);
-        }
-
-        .btn-core:active {
-            transform: translateY(2px);
-            box-shadow: 0 2px 0 #068000;
-            background: #0be000;
-        }
-
-        .line { margin-bottom: 6px; border-left: 3px solid #0dff00; padding-left: 10px; line-height: 1.2; }
-        .highlight { color: #fff; text-shadow: 0 0 8px #0dff00; font-weight: bold; }
-        .error { color: #ff3e3e; border-left-color: #ff3e3e; }
+        body { margin: 0; background: #000; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        canvas { position: absolute; z-index: 1; }
+        #core { position: relative; z-index: 10; width: 100px; height: 100px; border: 2px solid #00ff00; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #00ff00; font-family: monospace; transition: 2s; box-shadow: 0 0 20px #00ff00; }
+        #core:hover { transform: scale(1.2); box-shadow: 0 0 50px #00ff00; }
+        #msg { position: absolute; bottom: 10%; color: rgba(0,255,0,0.3); font-family: monospace; letter-spacing: 5px; font-size: 0.8em; }
     </style>
 </head>
 <body>
-    <div id="console">
-        <div class="line highlight">[SYSTEM] AUTONOMNÍ JÁDRO v4.1</div>
-        <div class="line">[STATUS] UI optimalizováno pro mobilní terén.</div>
-        <div class="line">[READY] Čekám na inicializaci skenu...</div>
-    </div>
-    <button id="mainAction" class="btn-core">Spustit Analýzu</button>
+    <canvas id="canvas"></canvas>
+    <div id="core" onclick="run()">START</div>
+    <div id="msg">SYSTEM_OPTIMIZED_FOR_YOU</div>
 
     <script>
-        // Oprava výšky pro mobilní prohlížeče
-        const updateHeight = () => {
-            let vh = window.innerHeight * 0.01;
-            document.documentElement.style.setProperty('--vh', `${vh}px`);
-        };
-        window.addEventListener('resize', updateHeight);
-        updateHeight();
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let active = false;
 
-        const terminal = document.getElementById('console');
-        const log = (msg, type = 'normal') => {
-            const div = document.createElement('div');
-            div.className = 'line';
-            if (type === 'high') div.classList.add('highlight');
-            if (type === 'error') div.classList.add('error');
+        function run() {
+            active = true;
+            document.getElementById('core').style.opacity = '0';
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
             
-            div.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
-            terminal.appendChild(div);
-            terminal.scrollTop = terminal.scrollHeight;
-        };
+            const ac = new (window.AudioContext || window.webkitAudioContext)();
+            const g = ac.createGain(); g.gain.value = 0.1;
+            
+            // Inteligentní pulsace (528Hz harmonie s 6Hz mozkem)
+            const o1 = ac.createOscillator(); o1.frequency.value = 528;
+            const o2 = ac.createOscillator(); o2.frequency.value = 534;
+            const merger = ac.createChannelMerger(2);
+            o1.connect(merger, 0, 0); o2.connect(merger, 0, 1);
+            merger.connect(g).connect(ac.destination);
+            o1.start(); o2.start();
 
-        const targetServiceUuid = '0000180a-0000-1000-8000-00805f9b34fb';
-        const targetCharUuid = '00002a29-0000-1000-8000-00805f9b34fb';
-
-        async function startHeuristicEngine() {
-            try {
-                log("Hledám cíl (Prefix CZ-)...", "high");
-                const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ namePrefix: 'CZ-' }],
-                    optionalServices: [targetServiceUuid]
-                });
-
-                log(`Navázáno spojení: ${device.name}`);
-                const server = await device.gatt.connect();
-                const service = await server.getPrimaryService(targetServiceUuid);
-                const char = await service.getCharacteristic(targetCharUuid);
-                
-                log("Spouštím sekvenční analýzu...", "high");
-
-                const attackVectors = [
-                    { name: "Ping", data: [0x00] },
-                    { name: "Auth Bypass", data: [0x01, 0x01, 0x01] },
-                    { name: "Buffer Simulation", data: [0x00, 0xff, 0x00, 0xff] },
-                    { name: "Emergency Open", data: [0x4f, 0x50, 0x45, 0x4e] },
-                    { name: "Master Key", data: [0x06, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01] }
-                ];
-
-                for (const vector of attackVectors) {
-                    log(`Vektor: ${vector.name}...`);
-                    await char.writeValue(new Uint8Array(vector.data));
-                    
-                    const response = await char.readValue().catch(() => null);
-                    if (response) {
-                        const val = new Uint8Array(response.buffer);
-                        log(`Odezva: ${Array.from(val).map(b => b.toString(16).padStart(2, '0')).join(' ')}`, "high");
-                    }
-                    await new Promise(r => setTimeout(r, 850));
-                }
-
-                log("SEKVENCE KOMPLETNÍ.", "high");
-
-            } catch (err) {
-                log(`CHYBA: ${err.message}`, "error");
-            }
+            draw();
         }
 
-        document.getElementById('mainAction').addEventListener('click', startHeuristicEngine);
+        function draw() {
+            if(!active) return;
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const t = Date.now() * 0.002;
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+
+            // Geometrická synchronizace - čistá logika
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for(let i=0; i<6; i++) {
+                const angle = t + (i * Math.PI * 2 / 6);
+                const x = cx + Math.cos(angle) * (150 + Math.sin(t)*50);
+                const y = cy + Math.sin(angle) * (150 + Math.sin(t)*50);
+                ctx.lineTo(x, y);
+                ctx.arc(x, y, 5, 0, Math.PI*2);
+            }
+            ctx.closePath();
+            ctx.stroke();
+
+            requestAnimationFrame(draw);
+        }
     </script>
 </body>
 </html>
