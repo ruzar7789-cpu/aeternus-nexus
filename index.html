@@ -3,70 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GENESIS_CORE</title>
+    <title>EMF Sentinel - Bio-Sensor</title>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        canvas { position: absolute; z-index: 1; }
-        #core { position: relative; z-index: 10; width: 100px; height: 100px; border: 2px solid #00ff00; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #00ff00; font-family: monospace; transition: 2s; box-shadow: 0 0 20px #00ff00; }
-        #core:hover { transform: scale(1.2); box-shadow: 0 0 50px #00ff00; }
-        #msg { position: absolute; bottom: 10%; color: rgba(0,255,0,0.3); font-family: monospace; letter-spacing: 5px; font-size: 0.8em; }
+        body { margin: 0; background: #050505; color: #00ff41; font-family: monospace; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+        canvas { border: 1px solid #00ff41; box-shadow: 0 0 20px rgba(0, 255, 65, 0.2); width: 90%; max-width: 600px; height: 300px; }
+        #controls { margin-top: 20px; text-align: center; }
+        button { background: transparent; border: 1px solid #00ff41; color: #00ff41; padding: 10px 20px; cursor: pointer; font-size: 1.2rem; transition: 0.3s; }
+        button:hover { background: #00ff41; color: #000; }
+        .data { font-size: 1.5rem; margin-bottom: 10px; }
+        .warning { color: #ff3e3e; display: none; margin-top: 10px; }
     </style>
 </head>
 <body>
-    <canvas id="canvas"></canvas>
-    <div id="core" onclick="run()">START</div>
-    <div id="msg">SYSTEM_OPTIMIZED_FOR_YOU</div>
+    <div class="data">Magnetická indukce: <span id="val">0</span> µT</div>
+    <canvas id="chart"></canvas>
+    <div id="controls">
+        <button id="startBtn">AKTIVOVAT SENZORY</button>
+        <p id="status">Status: Čekám na operátora...</p>
+        <div id="warning" class="warning">Senzor není dostupný nebo chybí oprávnění HTTPS.</div>
+    </div>
 
-    <script>
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        let active = false;
-
-        function run() {
-            active = true;
-            document.getElementById('core').style.opacity = '0';
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            
-            const ac = new (window.AudioContext || window.webkitAudioContext)();
-            const g = ac.createGain(); g.gain.value = 0.1;
-            
-            // Inteligentní pulsace (528Hz harmonie s 6Hz mozkem)
-            const o1 = ac.createOscillator(); o1.frequency.value = 528;
-            const o2 = ac.createOscillator(); o2.frequency.value = 534;
-            const merger = ac.createChannelMerger(2);
-            o1.connect(merger, 0, 0); o2.connect(merger, 0, 1);
-            merger.connect(g).connect(ac.destination);
-            o1.start(); o2.start();
-
-            draw();
-        }
-
-        function draw() {
-            if(!active) return;
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            const t = Date.now() * 0.002;
-            const cx = canvas.width / 2;
-            const cy = canvas.height / 2;
-
-            // Geometrická synchronizace - čistá logika
-            ctx.strokeStyle = '#00ff00';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            for(let i=0; i<6; i++) {
-                const angle = t + (i * Math.PI * 2 / 6);
-                const x = cx + Math.cos(angle) * (150 + Math.sin(t)*50);
-                const y = cy + Math.sin(angle) * (150 + Math.sin(t)*50);
-                ctx.lineTo(x, y);
-                ctx.arc(x, y, 5, 0, Math.PI*2);
-            }
-            ctx.closePath();
-            ctx.stroke();
-
-            requestAnimationFrame(draw);
-        }
-    </script>
+    <script src="app.js"></script>
 </body>
 </html>
