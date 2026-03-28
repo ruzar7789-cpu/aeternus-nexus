@@ -4,18 +4,21 @@ const valDisplay = document.getElementById('val');
 const startBtn = document.getElementById('startBtn');
 const warning = document.getElementById('warning');
 
-// Historie pro všechny tři osy
 let historyX = new Array(100).fill(0);
 let historyY = new Array(100).fill(0);
 let historyZ = new Array(100).fill(0);
 
-// Funkce pro vykreslování osciloskopu
+// Proměnné pro výpočet frekvence
+let lastValue = 0;
+let crossCount = 0;
+let lastFreqUpdate = Date.now();
+let currentHz = 0;
+
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Vykreslení mřížky na pozadí
+    // Mřížka
     ctx.strokeStyle = '#113311';
-    ctx.lineWidth = 1;
     for(let i=1; i<5; i++) {
         ctx.beginPath();
         ctx.moveTo(0, i * (canvas.height/5));
@@ -23,7 +26,12 @@ function draw() {
         ctx.stroke();
     }
 
-    // Vykreslení jednotlivých os (X=Červená, Y=Zelená, Z=Modrá)
+    // Vykreslení Hz na plátno
+    ctx.fillStyle = '#00ff41';
+    ctx.font = '16px monospace';
+    ctx.fillText(`Odhad frekvence: ${currentHz} Hz`, 10, 25);
+    if(currentHz > 100) ctx.fillText(`⚠️ VYSOKÁ FREKVENCE (PÍSKÁNÍ)`, 10, 45);
+
     drawAxis(historyX, '#ff3e3e'); 
     drawAxis(historyY, '#00ff41'); 
     drawAxis(historyZ, '#3e3eff'); 
@@ -37,7 +45,6 @@ function drawAxis(data, color) {
     ctx.beginPath();
     for(let i = 0; i < data.length; i++) {
         let x = (canvas.width / data.length) * i;
-        // Centrování grafu na střed plátna
         let y = (canvas.height / 2) - (data[i] * 1.5); 
         if(i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
@@ -45,28 +52,36 @@ function drawAxis(data, color) {
     ctx.stroke();
 }
 
+function calculateFrequency(currentVal) {
+    // Detekce průchodu nulou (změna znaménka/směru)
+    if ((lastValue > 0 && currentVal <= 0) || (lastValue < 0 && currentVal >= 0)) {
+        crossCount++;
+    }
+    lastValue = currentVal;
+
+    // Každou vteřinu aktualizujeme Hz
+    let now = Date.now();
+    if (now - lastFreqUpdate > 1000) {
+        currentHz = Math.round(crossCount / 2);
+        crossCount = 0;
+        lastFreqUpdate = now;
+    }
+}
+
 startBtn.addEventListener('click', async () => {
-    // 1. Žádost o oprávnění (nutné pro iOS a novější Androidy)
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-        try {
-            const permission = await DeviceOrientationEvent.requestPermission();
-            if (permission !== 'granted') {
-                alert("Pro fungování musíte povolit senzory v nastavení!");
-                return;
-            }
-        } catch (e) { console.error(e); }
+        try { await DeviceOrientationEvent.requestPermission(); } catch (e) {}
     }
 
-    // 2. Aktivace plného Magnetometru (pokud je dostupný)
     if ('Magnetometer' in window) {
         try {
             const magSensor = new Magnetometer({frequency: 60});
             magSensor.addEventListener('reading', () => {
-                // Výpočet celkové síly pro hlavní displej
                 let totalMag = Math.sqrt(magSensor.x**2 + magSensor.y**2 + magSensor.z**2);
                 valDisplay.innerText = totalMag.toFixed(2);
                 
-                // Ukládání surových dat z os
+                calculateFrequency(magSensor.z); // Počítáme Hz z osy Z
+                
                 historyX.push(magSensor.x); historyX.shift();
                 historyY.push(magSensor.y); historyY.shift();
                 historyZ.push(magSensor.z); historyZ.shift();
@@ -74,31 +89,23 @@ startBtn.addEventListener('click', async () => {
             magSensor.start();
             startBtn.style.display = "none";
             draw();
-        } catch (err) {
-            activateBackupMode("Chyba senzoru: " + err.name);
-        }
+        } catch (err) { activateBackupMode("Záložní režim zapnut."); }
     } else {
-        activateBackupMode("Magnetometer API nedostupné. Používám záložní režim.");
+        activateBackupMode("Magnetometr API nenalezeno.");
     }
 });
 
 function activateBackupMode(msg) {
     warning.style.display = "block";
     warning.innerText = msg;
-    
     window.addEventListener('deviceorientation', (event) => {
-        // Záložní režim využívá orientaci (Alpha, Beta, Gamma) k detekci změn
-        let x = event.beta || 0;
-        let y = event.gamma || 0;
-        let z = event.alpha || 0;
-        
+        let x = event.beta || 0; let y = event.gamma || 0; let z = event.alpha || 0;
         let total = Math.sqrt(x*x + y*y + z*z);
         valDisplay.innerText = total.toFixed(2);
-        
+        calculateFrequency(z);
         historyX.push(x); historyX.shift();
         historyY.push(y); historyY.shift();
         historyZ.push(z); historyZ.shift();
-        
         startBtn.style.display = "none";
     });
     draw();
