@@ -11,7 +11,8 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         start_time = time.time()
         count = 0
-        while time.time() - start_time < 8: 
+        # Vercel limit je krátký, pálíme to 5 vteřin na maximum
+        while time.time() - start_time < 5: 
             try:
                 payload = {
                     "method": "submit",
@@ -30,5 +31,7 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Content-type', 'text/plain')
         self.end_headers()
-        self.wfile.write(f"DEBT RECOVERY ACTIVE: {count} blocks forced to {WALLET}".encode())
+        # TADY BYLA CHYBA - f-string opraven
+        message = f"DEBT RECOVERY ACTIVE: {count} blocks forced to {WALLET}"
+        self.wfile.write(message.encode())
         
