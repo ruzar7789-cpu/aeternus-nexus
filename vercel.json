@@ -1,0 +1,13 @@
+{
+  "rewrites": [
+    {
+      "source": "/pay",
+      "destination": "/api/pay"
+    }
+  ],
+  "functions": {
+    "api/*.py": {
+      "runtime": "vercel-python@0.0.1"
+    }
+  }
+}
