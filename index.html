@@ -1,2 +1,36 @@
-<h1>AETERNUS-0 ONLINE</h1>
-<p>Rarita je aktivni.</p>
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <title>AETERNUS-0 | SECURE NODE</title>
+    <style>
+        body { background: #050505; color: #00ff41; font-family: 'Courier New', monospace; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
+        .terminal { width: 80%; border: 1px solid #00ff41; padding: 20px; box-shadow: 0 0 20px #00ff41; background: rgba(0, 20, 0, 0.9); }
+        .glitch { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <div class="terminal">
+        <h2 class="glitch">AETERNUS-0 :: SYSTEM_STATUS: ACTIVE</h2>
+        <p>> Node: smart-locker-security-audit</p>
+        <p>> Identity Shield: ENABLED</p>
+        <hr color="#00ff41">
+        <div id="logs">> Čekám na data ze sítě...</div>
+    </div>
+
+    <script>
+        // Tento skript ti bude posílat echo do tvého Kali tunelu
+        async function report() {
+            const info = {
+                ts: new Date().toLocaleTimeString(),
+                loc: window.location.href,
+                ua: navigator.userAgent
+            };
+            // Pokus o odeslání do tvého lhr.life tunelu (pokud ti běží v Kali)
+            fetch('https://ebfaa1e1d7eb69.lhr.life', { method: 'POST', mode: 'no-cors', body: JSON.stringify(info) }).catch(()=>{});
+        }
+        setInterval(report, 5000);
+    </script>
+</body>
+</html>
